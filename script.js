@@ -109,7 +109,7 @@ function drawChart(data) {
       const displayName = `${row.First_Name} (${row.Designation})`;
 
       chartData.addRow([
-        { v: nodeId, f: `<div class='node-box' data-id='${row.ID}'>${displayName}</div>` },
+        { v: nodeId, f: `<div class='node-box' style='font-size: 16px;' data-id='${row.ID}'>${displayName}</div>` },  
         managerId,
         row.Designation
       ]);
@@ -118,10 +118,7 @@ function drawChart(data) {
     const chart = new google.visualization.OrgChart(document.getElementById('chart-container'));
     chart.draw(chartData, { allowHtml: true });
 
-    // ✅ Auto-scale chart
-    // ✅ Auto-scale chart (device-independent)
-    // ✅ Auto-scale chart (works across all laptops/screens)
-    // ✅ Auto-scale chart with fallback scroll (cross-device safe)
+    // ✅ Auto-scale chart and center it
     setTimeout(() => {
       const container = document.getElementById('chart-container');
       const chartDiv = document.getElementById('chart_div');
@@ -129,44 +126,16 @@ function drawChart(data) {
       const chartWidth = container.scrollWidth;
       const chartHeight = container.scrollHeight;
 
-      const availableWidth = chartDiv.clientWidth - 80;   // safe margins
+      const availableWidth = chartDiv.clientWidth - 80;
       const availableHeight = chartDiv.clientHeight - 160;
 
-      let scale = Math.min(availableWidth / chartWidth, availableHeight / chartHeight);
-
-      if (scale > 1) scale = 1; // never upscale
-
+      let scale = Math.min(availableWidth / chartWidth, availableHeight / chartHeight, 1);
+      
       container.style.transform = `scale(${scale})`;
-      container.style.transformOrigin = "top center";
+      container.style.transformOrigin = "top left"; 
 
-      // ✅ allow scroll if chart is still larger
-      chartDiv.style.overflow = (scale < 1) ? "hidden" : "auto";
+      container.style.left = `calc(50% - ${(chartWidth / 2) * scale}px)`;
     }, 500);
-
-
-    // Keep connection line styling
-    setTimeout(() => {
-      document.querySelectorAll('path').forEach(path => {
-        path.setAttribute('stroke', '#0044cc');
-        path.setAttribute('stroke-width', '3');
-      });
-    }, 100);
-
-    // Popup binding
-    document.querySelectorAll('.node-box').forEach(box => {
-      box.addEventListener('click', () => {
-        const empId = box.dataset.id;
-        const emp = originalData.find(r => r.ID.toString() === empId);
-        const manager = originalData.find(r => r.ID === emp["Parent ID"]);
-
-        document.getElementById('emp-id').textContent = emp.ID;
-        document.getElementById('emp-name').textContent = emp.First_Name;
-        document.getElementById('emp-designation').textContent = emp.Designation;
-        document.getElementById('emp-under').textContent = manager ? manager.First_Name : 'None';
-
-        document.getElementById('popup').classList.remove('hidden');
-      });
-    });
   });
 }
 
@@ -202,10 +171,10 @@ document.getElementById('printBtn').addEventListener('click', () => {
         }
         #wrapper {
           display:flex;
-          justify-content:flex-start;
+          align-items:center;
           width:100%;
-          padding-right: 100px;
           box-sizing: border-box;
+          margin: 0 auto;
         }
         #print-chart {
           transform-origin: top left;
@@ -238,9 +207,13 @@ document.getElementById('printBtn').addEventListener('click', () => {
 
           const data = ${JSON.stringify(lastData)};
           data.forEach(row => {
+            const nodeId = row.ID.toString();
+            const displayName = row.First_Name + " (" + row.Designation + ")";
+            const managerId = row["Parent ID"] ? row["Parent ID"].toString() : '';
+
             chartData.addRow([
-              {v: row.ID.toString(), f: row.First_Name+" ("+row.Designation+")"},
-              row["Parent ID"] ? row["Parent ID"].toString() : '',
+              { v: nodeId, f: "<div class='node-box' style='font-size: 16px;' data-id='" + row.ID + "'>" + displayName + "</div>" },  
+              managerId,
               row.Designation
             ]);
           });
@@ -251,16 +224,14 @@ document.getElementById('printBtn').addEventListener('click', () => {
 
           setTimeout(()=>{
             const rect = container.getBoundingClientRect();
-            const pageWidth = window.innerWidth - 80;
-            const pageHeight = window.innerHeight - 80;
+            const pageWidth = window.innerWidth;
+            const pageHeight = window.innerHeight;
 
-            let scale = Math.min(pageWidth / rect.width, pageHeight / rect.height);
-            if (scale > 1) scale = 1;
+            let scale = Math.min(pageWidth / rect.width, pageHeight / rect.height, 1);
 
-            container.style.transform = "scale(" + scale + ")";
+            container.style.transform =  "scale(" + scale + ")";
             container.style.transformOrigin = "top left";
 
-            // ✅ This will open print preview of popup
             window.print();
           }, 1000);
         }
@@ -274,18 +245,10 @@ document.getElementById('printBtn').addEventListener('click', () => {
   printWindow.document.close();
 });
 
-
 // ✅ Reset main window state after printing
 window.onafterprint = function () {
   document.getElementById('search').value = '';
   drawChart(originalData);
   lastData = originalData;
 };
-
-// window.addEventListener('resize', () => {
-//   if (lastData.length > 0) {
-//     drawChart(lastData);
-//   }
-// });
-
 
